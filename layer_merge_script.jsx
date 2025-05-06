@@ -7,6 +7,12 @@
         return;
     }
 
+    // Create complete folder if it doesn't exist
+    var completeFolder = new Folder(folder.fsName + "/complete");
+    if (!completeFolder.exists) {
+        completeFolder.create();
+    }
+
     var files = folder.getFiles();
     var aiFile = null;
     var pngFile = null;
@@ -92,5 +98,15 @@
 
     placeImage(whitePngFile); // Middle white silhouette
     placeImage(pngFile);      // Top original PNG
-
+    
+    // Save the modified file to the complete folder
+    var fileName = aiFile.name;
+    var saveFile = new File(completeFolder.fsName + "/" + fileName);
+    
+    // Save as AI file
+    var saveOpts = new IllustratorSaveOptions();
+    saveOpts.compressed = true;
+    
+    doc.saveAs(saveFile, saveOpts);
+    
 })();
