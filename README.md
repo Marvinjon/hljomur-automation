@@ -44,7 +44,7 @@ The automation is managed through a combination of Python scripts and Adobe Illu
 3. The script will:
    - Convert PNGs to white silhouettes in the `to_white/` folder
    - Launch Illustrator and open the JSX script
-   - You'll need to manually confirm the script execution in Illustrator unless you run the one time script called disable_script_warning.jsx in illustraitor by going to file -> scripts -> other scripts
+   - You'll need to manually confirm the script execution in Illustrator unless you run the one time script called disable_script_warning.jsx in illustraitor by going to file -> scripts -> other scripts and choosing the disable_script_warning.jsx file
 4. Processed files will be saved in the `complete/` folder
 
 ### Method 2: Step-by-Step
