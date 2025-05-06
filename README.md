@@ -1,181 +1,72 @@
-# Image Processing Automation
+# AI and PNG File Combiner
 
-This repository contains scripts to automate the process of adding green backgrounds behind album covers and QR codes in PNG images. There are two approaches available:
+This script combines an Adobe Illustrator (.ai) file with a PNG image, adding green background boxes behind the PNG to ensure proper printing. The script will:
 
-1. **Illustrator-based**: Uses Adobe Illustrator for processing (requires macOS and Illustrator)
-2. **Pure Python**: Processes images using only Python libraries (works on any platform)
+1. Place the PNG on top of the AI file, centered and resized to fit
+2. Add two green boxes behind the PNG (to ensure proper printing with transparent backgrounds)
+3. Save the result as a new AI file
 
 ## Requirements
 
-### For Illustrator-based approach
-- macOS (scripts use AppleScript to control Adobe Illustrator)
-- Adobe Illustrator installed
-- Python 3.6+
+- Python 3.x
 - Required Python packages:
+  - PyPDF2
   - Pillow (PIL)
-  - OpenCV (cv2)
-  - NumPy
+  - reportlab
+  - PyMuPDF (fitz)
 
-### For Pure Python approach
-- Any operating system (Windows, macOS, Linux)
-- Python 3.6+
-- Required Python packages:
-  - Pillow (PIL)
-  - OpenCV (cv2)
-  - NumPy
-  - ReportLab (only needed for PDF output)
+You can install the required packages with:
 
-## Installation
-
-1. Clone this repository or download the scripts
-2. Install the required Python packages:
-
-```bash
-# For Illustrator-based approach
-pip install pillow opencv-python numpy
-
-# For Pure Python approach
-pip install pillow opencv-python numpy reportlab
+```
+pip install PyPDF2 Pillow reportlab PyMuPDF
 ```
 
-3. If using the Illustrator-based approach, run the environment test script to verify your setup:
+## Single File Usage
 
-```bash
-python test_environment.py
+There are two ways to use this tool:
+
+### 1. Using the Python script directly:
+
+```
+python3 combine_files.py [ai_file] [png_file] [output_file]
 ```
 
-## Scripts
+### 2. Using the shell script wrapper:
 
-### Pure Python Image Processing
-
-#### 1. PNG Processor (`png_processor.py`)
-
-This script processes PNG files directly without requiring Adobe Illustrator:
-
-```bash
-python png_processor.py path/to/image.png [--output OUTPUT_DIR] [--padding PADDING]
+```
+./combine_ai_png.sh [ai_file] [png_file] [output_file]
 ```
 
-Options:
-- `--output`: Directory to save output files (default: same as input)
-- `--padding`: Padding around images for green background in pixels (default: 10)
+### Arguments:
 
-Output:
-- `[basename]_album.png`: Album cover with green background
-- `[basename]_qr.png`: QR code with green background (if detected)
-- `[basename]_processed.png`: Combined image with both elements
+- `ai_file`: Path to the source AI file (default: 1013_41266223_16x22cm.ai)
+- `png_file`: Path to the PNG file to be embedded (default: 1013_41266223_16x22cm.png)
+- `output_file`: Path to the output AI file (default: combined_output.ai)
 
-#### 2. Illustrator-free Processing (`no_illustrator.py`)
+If you run either script without arguments, it will use the default filenames.
 
-This script creates PDF files with the PNG elements and green backgrounds:
+## Batch Processing
 
-```bash
-python no_illustrator.py path/to/file.ai path/to/image.png [--output OUTPUT_FILE]
+The batch processing script can automatically find and combine all matching AI and PNG files in the current directory:
+
+```
+python3 batch_combine.py [output_directory]
 ```
 
-Note: The AI file is only used for naming the output; it is not processed.
+- `output_directory`: Optional. The directory where combined files will be saved (default: "output")
 
-#### 3. Batch Processing without Illustrator (`batch_no_illustrator.py`)
+The script looks for AI and PNG files with the same base name (e.g., "logo.ai" and "logo.png") and processes them automatically.
 
-Process multiple files without using Adobe Illustrator:
+## Example
 
-```bash
-python batch_no_illustrator.py path/to/directory [--output OUTPUT_DIR] [--match {name,sequence}]
+```
+python3 combine_files.py template.ai logo.png output.ai
 ```
 
-Options:
-- `--output`: Directory to save output files (default: same as input)
-- `--ai`: Glob pattern for AI files (default: "*.ai")
-- `--png`: Glob pattern for PNG files (default: "*.png")
-- `--match`: Method to match AI and PNG files (default: "name")
-
-### Illustrator-based Processing
-
-#### 1. Basic Script (`automate_illustrator.py`)
-
-This script takes an AI file and a PNG file, and places the PNG on top of the AI file with a green background.
-
-```bash
-python automate_illustrator.py path/to/file.ai path/to/image.png
-```
-
-#### 2. Advanced Script (`automate_illustrator_advanced.py`)
-
-This script detects album cover and QR code in the input PNG file, separates them, and places them individually on the AI file with green backgrounds.
-
-```bash
-python automate_illustrator_advanced.py path/to/file.ai path/to/image.png
-```
-
-#### 3. Batch Processing with Illustrator (`batch_process.py`)
-
-This script allows you to process multiple AI and PNG file pairs at once.
-
-```bash
-python batch_process.py path/to/directory [--match {name,sequence}]
-```
-
-#### 4. Environment Test Script (`test_environment.py`)
-
-This script checks if your environment is properly set up for running the Illustrator automation scripts.
-
-```bash
-python test_environment.py
-```
-
-## How It Works
-
-### Pure Python Approach
-
-1. **PNG Processor**:
-   - Detects and extracts album cover and QR code regions from the PNG
-   - Adds green backgrounds behind each element
-   - Creates separate images and a combined image
-   - Works on any operating system
-
-2. **PDF Creation**:
-   - Similar to PNG processor but outputs PDF files
-   - Uses ReportLab for PDF generation
-   - Places PNG elements on a PDF with green backgrounds
-
-### Illustrator-based Approach
-
-1. **Basic Script**:
-   - Opens the AI file in Illustrator
-   - Places the PNG file on top
-   - Creates a green box behind the PNG
-   - Saves the result as a new AI file
-
-2. **Advanced Script**:
-   - Opens the AI file in Illustrator
-   - Uses OpenCV to detect and separate the album cover and QR code in the PNG
-   - Places each element separately on the AI file
-   - Creates green boxes behind each element
-   - Positions the elements appropriately
-   - Saves the result as a new AI file
-
-## Customization
-
-You can adjust the following parameters in the scripts:
-
-- Green color: Change the RGB values in the script (currently set to `(0, 128, 0)`)
-- Element positioning: Modify the coordinates in the positioning sections
-- Padding: Adjust the padding around elements (for pure Python scripts)
-- Thresholds for image detection: Adjust values in the `detect_qr_and_album` function
-
-## Troubleshooting
-
-### For Pure Python scripts
-- **Image detection issues**: If QR or album detection fails, the script will fall back to using the whole image
-- **Package installation errors**: Make sure you have the latest version of pip and try reinstalling the packages
-
-### For Illustrator scripts
-- **Illustrator not responding**: Make sure Illustrator is not minimized and doesn't have any dialog boxes open
-- **AppleScript errors**: Check the error messages printed by the script for clues about what went wrong
-- **Batch processing errors**: The batch script will continue processing other files even if one pair fails
+This will combine template.ai with logo.png and save the result as output.ai.
 
 ## Notes
 
-- The Illustrator-based scripts require Illustrator to be visible on screen while running
-- The pure Python scripts work on any platform without additional software
-- For batch processing, it's recommended to have a dedicated directory with only the files you want to process 
+- The PNG will be resized to fit within the AI file dimensions with a small margin.
+- Two green boxes of slightly different shades will be added behind the PNG.
+- The script preserves the original AI file and creates a new one with the combined content. 
