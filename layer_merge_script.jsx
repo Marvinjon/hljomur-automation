@@ -1,9 +1,9 @@
-#target illustrator
+// @target illustrator
 
 (function () {
-    var folder = Folder.selectDialog("Select the folder with your AI and PNG files");
-    if (!folder) {
-        alert("No folder selected. Exiting.");
+    var folder = new Folder("/Users/marvin/Desktop/Allskonar programing/hljomur-automation");
+    if (!folder.exists) {
+        alert("Specified folder does not exist. Exiting.");
         return;
     }
 
@@ -93,5 +93,4 @@
     placeImage(whitePngFile); // Middle white silhouette
     placeImage(pngFile);      // Top original PNG
 
-    alert("Vector elements changed to green. PNGs placed correctly.");
 })();

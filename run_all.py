@@ -1,0 +1,30 @@
+import subprocess
+import os
+import time
+
+# Step 1: Run the PNG-to-white conversion
+print("Running PNG processing...")
+subprocess.run(["python3", "process_plaques.py"], check=True)
+
+# Step 2: Run Illustrator script
+jsx_script_path = os.path.abspath("layer_merge_script.jsx")
+print(f"Launching Illustrator with script: {jsx_script_path}")
+
+# The simplest approach is to use 'open' command to open the script with Illustrator
+try:
+    # First, ensure Illustrator is open
+    illustrator_app = "/Applications/Adobe Illustrator 2025/Adobe Illustrator.app"
+    subprocess.run(["open", "-a", illustrator_app], check=True)
+    
+    # Give Illustrator time to open
+    print("Waiting for Illustrator to open...")
+    time.sleep(3)
+    
+    # Then open the script file - it should open in Illustrator
+    subprocess.run(["open", "-a", illustrator_app, jsx_script_path], check=True)
+    
+    print("Script opened in Illustrator. Please manually run the script from Illustrator's File > Scripts menu.")
+    print("Note: You may need to interact with Illustrator dialogs.")
+except Exception as e:
+    print(f"Error launching Illustrator: {e}")
+    print("You can try to manually open Illustrator and run the script from File > Scripts > Other Script...")
