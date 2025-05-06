@@ -13,7 +13,7 @@ def process_image(input_file):
     # Output filename
     filename = os.path.basename(input_file)
     base_name = os.path.splitext(filename)[0]
-    output_dir = 'converted'
+    output_dir = 'to_white'
     output_file = os.path.join(output_dir, f"{base_name}_white.png")
     
     # Create output directory if it doesn't exist
