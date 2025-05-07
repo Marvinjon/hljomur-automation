@@ -1,0 +1,1 @@
+Error processing 1013_41266223_16x22cm.ai: Error: Spot1 swatch not found

@@ -70,6 +70,7 @@
     
     var processedCount = 0;
     var errorCount = 0;
+    var errorLog = [];
     
     // Define function to process a single AI file
     function processAIFile(aiFile) {
@@ -101,6 +102,9 @@
         }
         
         if (!matchingPNG || !matchingWhitePNG) {
+            var msg = "Missing PNG or white PNG for: " + aiFile.name;
+            $.writeln(msg);
+            errorLog.push(msg);
             errorCount++;
             return false;
         }
@@ -126,34 +130,47 @@
                 }
             }
             
-            // Convert all vector items' fills and strokes to green
-            var green = new RGBColor();
-            green.red = 0;
-            green.green = 255;
-            green.blue = 0;
-            
-            function makeGreen(item) {
+            // Require user to create Spot1 swatch manually
+            var spotName = "Spot1";
+            var spot = null;
+            for (var i = 0; i < doc.spots.length; i++) {
+                if (doc.spots[i].name === spotName) {
+                    spot = doc.spots[i];
+                    break;
+                }
+            }
+            if (!spot) {
+                alert('Please create a Spot Color swatch named "Spot1" in your document before running this script.\nIt must be a true Spot Color, not Process.');
+                throw new Error('Spot1 swatch not found');
+            }
+            var spotColor = new SpotColor();
+            spotColor.spot = spot;
+            spotColor.tint = 100;
+
+            function makeSpot1(item) {
                 if ("filled" in item && item.filled) {
-                    item.fillColor = green;
+                    item.fillColor = spotColor;
                 }
                 if ("stroked" in item && item.stroked) {
-                    item.strokeColor = green;
+                    item.strokeColor = spotColor;
                 }
             }
             
             for (var i = 0; i < doc.pageItems.length; i++) {
                 var item = doc.pageItems[i];
                 if (item.typename === "PathItem" || item.typename === "TextFrame" || item.typename === "CompoundPathItem") {
-                    makeGreen(item);
+                    makeSpot1(item);
                 }
             }
             
+            // Place images as linked (default for placedItems.add())
             function placeImage(file) {
                 var image = doc.placedItems.add();
                 image.file = file;
                 image.width = abWidth;
                 image.height = abHeight;
                 image.position = [abBounds[0], abBounds[1]];
+                image.embed = false; // Ensure not embedded
                 return image;
             }
             
@@ -166,13 +183,27 @@
             // Save as AI file
             var saveOpts = new IllustratorSaveOptions();
             saveOpts.compressed = true;
+            saveOpts.embedLinkedFiles = false; // Ensure links are not embedded
             
             doc.saveAs(saveFile, saveOpts);
             doc.close(SaveOptions.DONOTSAVECHANGES);
             
+            // Copy PNG and white PNG to output folder for correct linking
+            function copyFileToFolder(srcFile, destFolder) {
+                var destFile = new File(destFolder.fsName + "/" + srcFile.name);
+                if (!destFile.exists) {
+                    srcFile.copy(destFile);
+                }
+            }
+            copyFileToFolder(matchingPNG, completeFolder);
+            copyFileToFolder(matchingWhitePNG, completeFolder);
+            
             processedCount++;
             return true;
         } catch (e) {
+            var msg = "Error processing " + aiFile.name + ": " + e;
+            $.writeln(msg);
+            errorLog.push(msg);
             errorCount++;
             return false;
         }
@@ -183,7 +214,17 @@
         processAIFile(aiFiles[k]);
     }
     
+    // Write error log to file if there are errors
+    if (errorLog.length > 0) {
+        var logFile = new File(scriptFolder.fsName + "/error_log.txt");
+        logFile.open("w");
+        for (var i = 0; i < errorLog.length; i++) {
+            logFile.writeln(errorLog[i]);
+        }
+        logFile.close();
+    }
+    
     alert("Processing complete!\n" + 
           "Files processed: " + processedCount + " of " + aiFiles.length + "\n" +
-          (errorCount > 0 ? "Errors: " + errorCount : "All files processed successfully!"));
+          (errorCount > 0 ? ("Errors: " + errorCount + " (see error_log.txt)") : "All files processed successfully!"));
 })();
