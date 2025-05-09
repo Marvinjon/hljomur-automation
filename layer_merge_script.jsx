@@ -163,14 +163,14 @@
                 }
             }
             
-            // Place images as linked (default for placedItems.add())
+            // Place images as embedded
             function placeImage(file) {
                 var image = doc.placedItems.add();
                 image.file = file;
                 image.width = abWidth;
                 image.height = abHeight;
                 image.position = [abBounds[0], abBounds[1]];
-                image.embed = false; // Ensure not embedded
+                image.embed(); // Embed the image in the AI file
                 return image;
             }
             
@@ -183,20 +183,9 @@
             // Save as AI file
             var saveOpts = new IllustratorSaveOptions();
             saveOpts.compressed = true;
-            saveOpts.embedLinkedFiles = false; // Ensure links are not embedded
-            
+            // No need to set embedLinkedFiles, as images are already embedded
             doc.saveAs(saveFile, saveOpts);
             doc.close(SaveOptions.DONOTSAVECHANGES);
-            
-            // Copy PNG and white PNG to output folder for correct linking
-            function copyFileToFolder(srcFile, destFolder) {
-                var destFile = new File(destFolder.fsName + "/" + srcFile.name);
-                if (!destFile.exists) {
-                    srcFile.copy(destFile);
-                }
-            }
-            copyFileToFolder(matchingPNG, completeFolder);
-            copyFileToFolder(matchingWhitePNG, completeFolder);
             
             processedCount++;
             return true;
