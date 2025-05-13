@@ -124,20 +124,17 @@
             var abWidth = abBounds[2] - abBounds[0];
             var abHeight = abBounds[1] - abBounds[3];
             
-            // Remove any full-background rectangles
-            for (var i = doc.pathItems.length - 1; i >= 0; i--) {
-                var item = doc.pathItems[i];
-                if (
-                    !item.guides &&
-                    !item.clipping &&
-                    Math.abs(item.width - abWidth) < 2 &&
-                    Math.abs(item.height - abHeight) < 2
-                ) {
-                    item.remove();
-                }
-            }
+            // Create layers for our 3-layer structure
+            var originalPngLayer = doc.layers.add();
+            originalPngLayer.name = "Original PNG";
             
-            // Create or get spot color from the spotcolor.ai file
+            var whitePngLayer = doc.layers.add();
+            whitePngLayer.name = "White PNG";
+            
+            var vectorLayer = doc.layers.add();
+            vectorLayer.name = "Vector Spot Color";
+            
+            // Get or create spot color from the spotcolor.ai file
             var spotName = "Spot1";
             var spot = null;
             
@@ -149,7 +146,7 @@
                 }
             }
             
-            // If Spot1 doesn't exist, create it with RGB values from spotcolor.ai
+            // If Spot1 doesn't exist, create it with color values from spotcolor.ai
             if (!spot) {
                 // Try to open spotcolor.ai to get the spot color definition
                 var tempDoc = null;
@@ -183,7 +180,7 @@
                                 spot.color = cmykColor;
                             }
                             
-                            // Set the color type to SPOT to ensure it's not a process color
+                            // Set the color type to SPOT
                             spot.colorType = ColorModel.SPOT;
                             
                             spotFound = true;
@@ -191,7 +188,7 @@
                         }
                     }
                     
-                    // If no spot color found, create default RGB green (105, 208, 69)
+                    // If no spot color found, create default RGB green
                     if (!spotFound) {
                         spot = doc.spots.add();
                         spot.name = spotName;
@@ -200,7 +197,6 @@
                         rgbColor.green = 208;
                         rgbColor.blue = 69;
                         spot.color = rgbColor;
-                        // Set the color type to SPOT to ensure it's not a process color
                         spot.colorType = ColorModel.SPOT;
                     }
                     
@@ -217,72 +213,85 @@
                     rgbColor.green = 208;
                     rgbColor.blue = 69;
                     spot.color = rgbColor;
-                    // Set the color type to SPOT to ensure it's not a process color
                     spot.colorType = ColorModel.SPOT;
                 }
             }
             
+            // Create SpotColor object for use
             var spotColor = new SpotColor();
             spotColor.spot = spot;
             spotColor.tint = 100;
 
-            function makeSpot1(item) {
-                if ("filled" in item && item.filled) {
-                    item.fillColor = spotColor;
-                }
-                if ("stroked" in item && item.stroked) {
-                    item.strokeColor = spotColor;
+            // Set current layer to vector layer
+            doc.activeLayer = vectorLayer;
+            
+            // Function to recursively apply spot color to all path items, even in groups
+            function applySpotColorToItem(item) {
+                try {
+                    if (item.typename === "PathItem") {
+                        if (item.filled) item.fillColor = spotColor;
+                        if (item.stroked) item.strokeColor = spotColor;
+                    } else if (item.typename === "CompoundPathItem") {
+                        for (var j = 0; j < item.pathItems.length; j++) {
+                            var pathItem = item.pathItems[j];
+                            if (pathItem.filled) pathItem.fillColor = spotColor;
+                            if (pathItem.stroked) pathItem.strokeColor = spotColor;
+                        }
+                    } else if (item.typename === "TextFrame") {
+                        item.textRange.fillColor = spotColor;
+                        if (item.textRange.strokeColor) item.textRange.strokeColor = spotColor;
+                    } else if (item.typename === "GroupItem") {
+                        for (var k = 0; k < item.pageItems.length; k++) {
+                            applySpotColorToItem(item.pageItems[k]);
+                        }
+                    }
+                } catch (e) {
+                    $.writeln("Error applying color to item: " + e);
                 }
             }
             
+            // Get all content from the original document
+            var allPageItems = [];
             for (var i = 0; i < doc.pageItems.length; i++) {
-                var item = doc.pageItems[i];
-                if (item.typename === "PathItem" || item.typename === "TextFrame" || item.typename === "CompoundPathItem") {
-                    makeSpot1(item);
+                allPageItems.push(doc.pageItems[i]);
+            }
+            
+            // Apply spot color to all items and move them to the vector layer
+            for (var i = 0; i < allPageItems.length; i++) {
+                var item = allPageItems[i];
+                if (item.layer == vectorLayer) continue;
+                
+                try {
+                    item.move(vectorLayer, ElementPlacement.PLACEATEND);
+                    applySpotColorToItem(item);
+                } catch (e) {
+                    $.writeln("Error moving or coloring item: " + e);
                 }
             }
             
-            // Instead of tracing, we'll create a white silhouette directly
+            // Set current layer to white PNG layer
+            doc.activeLayer = whitePngLayer;
             
-            // First, place the white PNG as a reference
-            var whiteReference = doc.placedItems.add();
-            whiteReference.file = matchingWhitePNG;
-            whiteReference.width = abWidth;
-            whiteReference.height = abHeight;
-            whiteReference.position = [abBounds[0], abBounds[1]];
+            // Place white PNG in the middle layer
+            var whitePlacedItem = whitePngLayer.placedItems.add();
+            whitePlacedItem.file = matchingWhitePNG;
+            whitePlacedItem.width = abWidth;
+            whitePlacedItem.height = abHeight;
+            whitePlacedItem.position = [abBounds[0], abBounds[1]];
             
-            // Create a white rectangle that matches the white PNG shape
-            var whiteMask = doc.pathItems.rectangle(
-                abBounds[1],     // top
-                abBounds[0],     // left
-                abWidth,         // width
-                abHeight,        // height
-                false            // reversed
-            );
+            // Set current layer to original PNG layer (top)
+            doc.activeLayer = originalPngLayer;
             
-            // Set the fill color to white
-            var whiteColor = new CMYKColor();
-            whiteColor.cyan = 0;
-            whiteColor.magenta = 0;
-            whiteColor.yellow = 0;
-            whiteColor.black = 0;
-            whiteMask.fillColor = whiteColor;
-            whiteMask.stroked = false;
+            // Place original PNG on top
+            var originalPlacedItem = originalPngLayer.placedItems.add();
+            originalPlacedItem.file = matchingPNG;
+            originalPlacedItem.width = abWidth;
+            originalPlacedItem.height = abHeight;
+            originalPlacedItem.position = [abBounds[0], abBounds[1]];
             
-            // Create a clipping mask using the white PNG as a template
-            whiteReference.selected = true;
-            whiteMask.selected = true;
-            
-            // Create a clipping mask
-            app.executeMenuCommand("makeMask");
-            
-            // Place the original PNG on top
-            var originalImage = doc.placedItems.add();
-            originalImage.file = matchingPNG;
-            originalImage.width = abWidth;
-            originalImage.height = abHeight;
-            originalImage.position = [abBounds[0], abBounds[1]];
-            originalImage.embed(); // Embed the image in the AI file
+            // Rearrange layers so Original PNG is on top, White PNG is in the middle
+            whitePngLayer.zOrder(ZOrderMethod.SENDBACKWARD);
+            vectorLayer.zOrder(ZOrderMethod.SENDBACKWARD);
             
             // Save the modified file to the complete folder
             var saveFile = new File(completeFolder.fsName + "/" + aiFile.name);
