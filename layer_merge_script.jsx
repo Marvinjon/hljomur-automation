@@ -67,6 +67,13 @@
         alert("No white PNG files found in 'to_white' folder.");
         return;
     }
+
+    // Check if spotcolor.ai exists
+    var spotColorFile = new File(scriptFolder.fsName + "/spotcolor.ai");
+    if (!spotColorFile.exists) {
+        alert("The 'spotcolor.ai' file does not exist in the script folder. Please add this file for the spot color reference.");
+        return;
+    }
     
     var processedCount = 0;
     var errorCount = 0;
@@ -130,19 +137,91 @@
                 }
             }
             
-            // Require user to create Spot1 swatch manually
+            // Create or get spot color from the spotcolor.ai file
             var spotName = "Spot1";
             var spot = null;
+            
+            // First check if Spot1 already exists in the document
             for (var i = 0; i < doc.spots.length; i++) {
                 if (doc.spots[i].name === spotName) {
                     spot = doc.spots[i];
                     break;
                 }
             }
+            
+            // If Spot1 doesn't exist, create it with RGB values from spotcolor.ai
             if (!spot) {
-                alert('Please create a Spot Color swatch named "Spot1" in your document before running this script.\nIt must be a true Spot Color, not Process.');
-                throw new Error('Spot1 swatch not found');
+                // Try to open spotcolor.ai to get the spot color definition
+                var tempDoc = null;
+                try {
+                    tempDoc = app.open(spotColorFile);
+                    
+                    // Find Spot1 in the opened document
+                    var spotFound = false;
+                    for (var i = 0; i < tempDoc.spots.length; i++) {
+                        if (tempDoc.spots[i].name === spotName) {
+                            // Create spot in our document with the same color
+                            spot = doc.spots.add();
+                            spot.name = spotName;
+                            
+                            // Copy the color
+                            var tempSpotColor = tempDoc.spots[i].color;
+                            if (tempSpotColor.typename === "RGBColor") {
+                                // RGB color
+                                var rgbColor = new RGBColor();
+                                rgbColor.red = tempSpotColor.red;
+                                rgbColor.green = tempSpotColor.green;
+                                rgbColor.blue = tempSpotColor.blue;
+                                spot.color = rgbColor;
+                            } else if (tempSpotColor.typename === "CMYKColor") {
+                                // CMYK color
+                                var cmykColor = new CMYKColor();
+                                cmykColor.cyan = tempSpotColor.cyan;
+                                cmykColor.magenta = tempSpotColor.magenta;
+                                cmykColor.yellow = tempSpotColor.yellow;
+                                cmykColor.black = tempSpotColor.black;
+                                spot.color = cmykColor;
+                            }
+                            
+                            // Set the color type to SPOT to ensure it's not a process color
+                            spot.colorType = ColorModel.SPOT;
+                            
+                            spotFound = true;
+                            break;
+                        }
+                    }
+                    
+                    // If no spot color found, create default RGB green (105, 208, 69)
+                    if (!spotFound) {
+                        spot = doc.spots.add();
+                        spot.name = spotName;
+                        var rgbColor = new RGBColor();
+                        rgbColor.red = 105;
+                        rgbColor.green = 208;
+                        rgbColor.blue = 69;
+                        spot.color = rgbColor;
+                        // Set the color type to SPOT to ensure it's not a process color
+                        spot.colorType = ColorModel.SPOT;
+                    }
+                    
+                    // Close the temp document without saving
+                    tempDoc.close(SaveOptions.DONOTSAVECHANGES);
+                    
+                } catch (e) {
+                    // If there was an error opening spotcolor.ai, create default spot color
+                    $.writeln("Error opening spotcolor.ai: " + e);
+                    spot = doc.spots.add();
+                    spot.name = spotName;
+                    var rgbColor = new RGBColor();
+                    rgbColor.red = 105;
+                    rgbColor.green = 208;
+                    rgbColor.blue = 69;
+                    spot.color = rgbColor;
+                    // Set the color type to SPOT to ensure it's not a process color
+                    spot.colorType = ColorModel.SPOT;
+                }
             }
+            
             var spotColor = new SpotColor();
             spotColor.spot = spot;
             spotColor.tint = 100;

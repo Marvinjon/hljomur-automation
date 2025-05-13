@@ -1,1 +1,1 @@
-Error processing 1013_41266223_16x22cm.ai: Error: an Illustrator error occurred: 1112237433 ('yeKB')
+Missing PNG or white PNG for: 1017_41766476_13x18cm.ai
