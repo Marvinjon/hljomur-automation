@@ -163,19 +163,47 @@
                 }
             }
             
-            // Place images as embedded
-            function placeImage(file) {
-                var image = doc.placedItems.add();
-                image.file = file;
-                image.width = abWidth;
-                image.height = abHeight;
-                image.position = [abBounds[0], abBounds[1]];
-                image.embed(); // Embed the image in the AI file
-                return image;
-            }
+            // Instead of tracing, we'll create a white silhouette directly
             
-            placeImage(matchingWhitePNG); // Middle white silhouette
-            placeImage(matchingPNG);      // Top original PNG
+            // First, place the white PNG as a reference
+            var whiteReference = doc.placedItems.add();
+            whiteReference.file = matchingWhitePNG;
+            whiteReference.width = abWidth;
+            whiteReference.height = abHeight;
+            whiteReference.position = [abBounds[0], abBounds[1]];
+            
+            // Create a white rectangle that matches the white PNG shape
+            var whiteMask = doc.pathItems.rectangle(
+                abBounds[1],     // top
+                abBounds[0],     // left
+                abWidth,         // width
+                abHeight,        // height
+                false            // reversed
+            );
+            
+            // Set the fill color to white
+            var whiteColor = new CMYKColor();
+            whiteColor.cyan = 0;
+            whiteColor.magenta = 0;
+            whiteColor.yellow = 0;
+            whiteColor.black = 0;
+            whiteMask.fillColor = whiteColor;
+            whiteMask.stroked = false;
+            
+            // Create a clipping mask using the white PNG as a template
+            whiteReference.selected = true;
+            whiteMask.selected = true;
+            
+            // Create a clipping mask
+            app.executeMenuCommand("makeMask");
+            
+            // Place the original PNG on top
+            var originalImage = doc.placedItems.add();
+            originalImage.file = matchingPNG;
+            originalImage.width = abWidth;
+            originalImage.height = abHeight;
+            originalImage.position = [abBounds[0], abBounds[1]];
+            originalImage.embed(); // Embed the image in the AI file
             
             // Save the modified file to the complete folder
             var saveFile = new File(completeFolder.fsName + "/" + aiFile.name);
@@ -183,7 +211,6 @@
             // Save as AI file
             var saveOpts = new IllustratorSaveOptions();
             saveOpts.compressed = true;
-            // No need to set embedLinkedFiles, as images are already embedded
             doc.saveAs(saveFile, saveOpts);
             doc.close(SaveOptions.DONOTSAVECHANGES);
             
