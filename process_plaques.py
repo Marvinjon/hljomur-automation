@@ -52,10 +52,11 @@ def process_image(input_file):
     return output_file
 
 def process_all_images():
-    """Process all PNG files in the current directory."""
-    png_files = glob.glob("*.png")
+    """Process all PNG files in the to_be_processed directory."""
+    input_dir = 'to_be_processed'
+    png_files = glob.glob(os.path.join(input_dir, "*.png"))
     if not png_files:
-        print("No PNG files found in the current directory.")
+        print(f"No PNG files found in the {input_dir} directory.")
         return
     
     for png_file in png_files:

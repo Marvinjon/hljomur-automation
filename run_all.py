@@ -4,7 +4,9 @@ import time
 
 # Step 1: Run the PNG-to-white conversion
 print("Running PNG processing...")
+print("Processing PNGs from 'to_be_processed' folder to create white versions...")
 subprocess.run(["python3", "process_plaques.py"], check=True)
+print("PNG processing complete.")
 
 # Step 2: Run Illustrator script
 jsx_script_path = os.path.abspath("layer_merge_script.jsx")
@@ -27,4 +29,4 @@ try:
     print("Note: You may need to interact with Illustrator dialogs.")
 except Exception as e:
     print(f"Error launching Illustrator: {e}")
-    print("You can try to manually open Illustrator and run the script from File > Scripts > Other Script...")
+    print("You can try to manually open Illustrator and run the script from File > Scripts > Other Script...") 
