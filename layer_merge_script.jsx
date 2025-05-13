@@ -279,6 +279,15 @@
             whitePlacedItem.height = abHeight;
             whitePlacedItem.position = [abBounds[0], abBounds[1]];
             
+            // Embed the white PNG
+            try {
+                whitePlacedItem.embed();
+                $.writeln("Embedded white PNG: " + matchingWhitePNG.name);
+            } catch(e) {
+                $.writeln("Error embedding white PNG: " + e);
+                errorLog.push("Error embedding white PNG " + matchingWhitePNG.name + ": " + e);
+            }
+            
             // Set current layer to original PNG layer (top)
             doc.activeLayer = originalPngLayer;
             
@@ -288,6 +297,15 @@
             originalPlacedItem.width = abWidth;
             originalPlacedItem.height = abHeight;
             originalPlacedItem.position = [abBounds[0], abBounds[1]];
+            
+            // Embed the original PNG
+            try {
+                originalPlacedItem.embed();
+                $.writeln("Embedded original PNG: " + matchingPNG.name);
+            } catch(e) {
+                $.writeln("Error embedding original PNG: " + e);
+                errorLog.push("Error embedding original PNG " + matchingPNG.name + ": " + e);
+            }
             
             // Rearrange layers so Original PNG is on top, White PNG is in the middle
             whitePngLayer.zOrder(ZOrderMethod.SENDBACKWARD);
