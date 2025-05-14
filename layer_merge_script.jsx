@@ -115,15 +115,15 @@
             var abWidth = abBounds[2] - abBounds[0];
             var abHeight = abBounds[1] - abBounds[3];
             
-            // Create layers for our 3-layer structure
+            // Create layers for our 3-layer structure - the order of creation is bottom to top
+            var vectorLayer = doc.layers.add();
+            vectorLayer.name = "Vector Spot Color";
+            
             var originalPngLayer = doc.layers.add();
             originalPngLayer.name = "Original PNG";
             
             var whiteVectorLayer = doc.layers.add();
             whiteVectorLayer.name = "White Vector";
-            
-            var vectorLayer = doc.layers.add();
-            vectorLayer.name = "Vector Spot Color";
             
             // Get or create spot color from the spotcolor.ai file
             var spotName = "Spot1";
@@ -260,7 +260,26 @@
                 }
             }
             
-            // Set current layer to white vector layer
+            // Set current layer to original PNG layer for the middle layer
+            doc.activeLayer = originalPngLayer;
+            
+            // Place original PNG
+            var originalPlacedItem = originalPngLayer.placedItems.add();
+            originalPlacedItem.file = matchingPNG;
+            originalPlacedItem.width = abWidth;
+            originalPlacedItem.height = abHeight;
+            originalPlacedItem.position = [abBounds[0], abBounds[1]];
+            
+            // Embed the original PNG
+            try {
+                originalPlacedItem.embed();
+                $.writeln("Embedded original PNG: " + matchingPNG.name);
+            } catch(e) {
+                $.writeln("Error embedding original PNG: " + e);
+                errorLog.push("Error embedding original PNG " + matchingPNG.name + ": " + e);
+            }
+            
+            // Set current layer to white vector layer (top layer)
             doc.activeLayer = whiteVectorLayer;
             
             // Create white vector shapes directly in the document based on the SVG paths
@@ -388,28 +407,38 @@
                 smallPath.setEntirePath(smallPathPoints);
             }
             
-            // Set current layer to original PNG layer (top)
-            doc.activeLayer = originalPngLayer;
+            // Set opacity of white vector layer to 1%
+            whiteVectorLayer.opacity = 1;
             
-            // Place original PNG on top
-            var originalPlacedItem = originalPngLayer.placedItems.add();
-            originalPlacedItem.file = matchingPNG;
-            originalPlacedItem.width = abWidth;
-            originalPlacedItem.height = abHeight;
-            originalPlacedItem.position = [abBounds[0], abBounds[1]];
+            // Ensure correct layer ordering - we created them in the right order
+            // but let's verify by explicitly setting the stacking order
+            // (Illustrator layers stack in reverse order of creation - last created is on top)
             
-            // Embed the original PNG
-            try {
-                originalPlacedItem.embed();
-                $.writeln("Embedded original PNG: " + matchingPNG.name);
-            } catch(e) {
-                $.writeln("Error embedding original PNG: " + e);
-                errorLog.push("Error embedding original PNG " + matchingPNG.name + ": " + e);
+            // These lines ensure proper stacking order:
+            // White Vector Layer (top)
+            // Original PNG Layer (middle)
+            // Vector Spot Color Layer (bottom)
+            
+            // Make white vector layer the top layer (in case Illustrator has reordered)
+            if (whiteVectorLayer.index !== 0) {
+                whiteVectorLayer.zOrder(ZOrderMethod.BRINGTOFRONT);
             }
             
-            // Rearrange layers so Original PNG is on top, White Vector is in the middle
-            whiteVectorLayer.zOrder(ZOrderMethod.SENDBACKWARD);
-            vectorLayer.zOrder(ZOrderMethod.SENDBACKWARD);
+            // Make original PNG layer the middle layer
+            if (originalPngLayer.index !== 1) {
+                originalPngLayer.zOrder(ZOrderMethod.SENDTOBACK);
+                originalPngLayer.zOrder(ZOrderMethod.BRINGFORWARD);
+            }
+            
+            // Make vector layer the bottom layer
+            if (vectorLayer.index !== 2) {
+                vectorLayer.zOrder(ZOrderMethod.SENDTOBACK);
+            }
+            
+            $.writeln("Final layer order from top to bottom:");
+            $.writeln("1: " + doc.layers[0].name);
+            $.writeln("2: " + doc.layers[1].name);
+            $.writeln("3: " + doc.layers[2].name);
             
             // Save the modified file to the complete folder
             var saveFile = new File(completeFolder.fsName + "/" + aiFile.name);
