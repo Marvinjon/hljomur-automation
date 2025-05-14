@@ -123,7 +123,7 @@
             originalPngLayer.name = "Original PNG";
             
             var whiteVectorLayer = doc.layers.add();
-            whiteVectorLayer.name = "White Vector";
+            whiteVectorLayer.name = "White Overlay";
             
             // Get or create spot color from the spotcolor.ai file
             var spotName = "Spot1";
@@ -283,11 +283,11 @@
             doc.activeLayer = whiteVectorLayer;
             
             // Create white vector shapes directly in the document based on the SVG paths
-            // Setting fill color to white
-            var whiteColor = new RGBColor();
-            whiteColor.red = 255;
-            whiteColor.green = 255;
-            whiteColor.blue = 255;
+            // Setting fill color to yellow instead of white
+            var yellowColor = new RGBColor();
+            yellowColor.red = 255;
+            yellowColor.green = 255;
+            yellowColor.blue = 0;
             
             if (sizeIs13x18) {
                 // Create paths based on 13x18cm_white.svg
@@ -301,7 +301,7 @@
                 var mainPath = whiteVectorLayer.pathItems.add();
                 mainPath.filled = true;
                 mainPath.stroked = false;
-                mainPath.fillColor = whiteColor;
+                mainPath.fillColor = yellowColor;
                 
                 // Create a rectangle using the dimensions from the SVG
                 // Original SVG path is at translate(199,134) with size 1138x1138
@@ -327,7 +327,7 @@
                 var smallPath = whiteVectorLayer.pathItems.add();
                 smallPath.filled = true;
                 smallPath.stroked = false;
-                smallPath.fillColor = whiteColor;
+                smallPath.fillColor = yellowColor;
                 
                 // Original SVG path is at translate(1025,1336) with size 204x204
                 var smallX = 1025 * scale;
@@ -360,7 +360,7 @@
                 var mainPath = whiteVectorLayer.pathItems.add();
                 mainPath.filled = true;
                 mainPath.stroked = false;
-                mainPath.fillColor = whiteColor;
+                mainPath.fillColor = yellowColor;
                 
                 // Original SVG path is at translate(250,164) with size 1390x1390
                 var svgX = 250 * scale;
@@ -385,7 +385,7 @@
                 var smallPath = whiteVectorLayer.pathItems.add();
                 smallPath.filled = true;
                 smallPath.stroked = false;
-                smallPath.fillColor = whiteColor;
+                smallPath.fillColor = yellowColor;
                 
                 // Original SVG path is at translate(1260,1632) with size 249x249
                 var smallX = 1260 * scale;
@@ -407,7 +407,7 @@
                 smallPath.setEntirePath(smallPathPoints);
             }
             
-            // Set opacity of white vector layer to 1%
+            // Set opacity of yellow overlay vector layer to 1%
             whiteVectorLayer.opacity = 1;
             
             // Ensure correct layer ordering - we created them in the right order
@@ -415,11 +415,11 @@
             // (Illustrator layers stack in reverse order of creation - last created is on top)
             
             // These lines ensure proper stacking order:
-            // White Vector Layer (top)
+            // Yellow overlay vector layer (top)
             // Original PNG Layer (middle)
             // Vector Spot Color Layer (bottom)
             
-            // Make white vector layer the top layer (in case Illustrator has reordered)
+            // Make yellow overlay vector layer the top layer (in case Illustrator has reordered)
             if (whiteVectorLayer.index !== 0) {
                 whiteVectorLayer.zOrder(ZOrderMethod.BRINGTOFRONT);
             }
