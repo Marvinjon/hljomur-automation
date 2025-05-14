@@ -22,7 +22,6 @@ The automation process consists of three main parts:
 ## File Structure
 
 - `to_be_processed/`: Place your original AI and PNG files here
-- `to_white/`: Output folder for white PNG versions (created automatically)
 - `complete/`: Output folder for processed Illustrator files (created automatically)
 - `spotcolor.ai`: Reference file containing the spot color definition
 
@@ -35,41 +34,22 @@ python3 run_all.py
 ```
 
 This will:
-1. Process all PNGs to create white versions
-2. Launch Adobe Illustrator with the merge script
+ Launch Adobe Illustrator with the merge script
 
-### Option 2: Run Individual Scripts
-
-1. First, process PNG files:
-```bash
-python3 process_plaques.py
-```
-
-2. Then manually run the Illustrator script:
-   - Open Adobe Illustrator
-   - Go to File > Scripts > Other Script...
-   - Select `layer_merge_script.jsx`
 
 ## How It Works
 
 1. **PNG Processing**:
    - Takes PNG files from `to_be_processed/`
-   - Creates white silhouettes preserving transparency
-   - Saves them to `to_white/` with "_white" suffix
 
 2. **Layer Merging**:
    - Creates a three-layer structure
-   - Applies spot color to all vector content
+   - Applies spot color to all vector content of the original ai file
    - Places the original PNG in the middle layer
-   - Creates a yellow overlay layer (formerly "White Vector", now "Yellow Overlay") set to 1% opacity
+   - Creates a yellow overlay layer "Yellow Overlay" set to 1% opacity
    - Handles two size variants (13x18cm and 16x22cm)
    - Saves the processed file to the `complete/` folder
 
-## Recent Changes
-
-- Renamed "White Vector" layer to "Yellow Overlay" for clarity
-- Yellow shapes are now used as overlays instead of white
-- Various optimizations and bug fixes
 
 ## Troubleshooting
 
