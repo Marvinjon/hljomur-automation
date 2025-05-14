@@ -123,7 +123,7 @@
             originalPngLayer.name = "Original PNG";
             
             var whiteVectorLayer = doc.layers.add();
-            whiteVectorLayer.name = "White Overlay";
+            whiteVectorLayer.name = "Yellow Overlay";
             
             // Get or create spot color from the spotcolor.ai file
             var spotName = "Spot1";
