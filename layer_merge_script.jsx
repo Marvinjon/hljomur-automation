@@ -27,8 +27,6 @@
     var files = folder.getFiles();
     var aiFiles = [];
     var pngFiles = [];
-    var toWhiteFolder = new Folder(scriptFolder.fsName + "/to_white");
-    var whitePngFiles = [];
     
     // Sort files by type
     for (var i = 0; i < files.length; i++) {
@@ -42,17 +40,6 @@
         }
     }
     
-    // Get white PNG files from to_white folder
-    if (toWhiteFolder.exists) {
-        var whiteFiles = toWhiteFolder.getFiles("*.png");
-        for (var j = 0; j < whiteFiles.length; j++) {
-            var name = whiteFiles[j].name;
-            if (name.match(/_white\.png$/i)) {
-                whitePngFiles.push(whiteFiles[j]);
-            }
-        }
-    }
-    
     if (aiFiles.length === 0) {
         alert("No AI files found in 'to_be_processed' folder.");
         return;
@@ -60,11 +47,6 @@
     
     if (pngFiles.length === 0) {
         alert("No PNG files found in 'to_be_processed' folder.");
-        return;
-    }
-    
-    if (whitePngFiles.length === 0) {
-        alert("No white PNG files found in 'to_white' folder.");
         return;
     }
 
@@ -81,10 +63,9 @@
     
     // Define function to process a single AI file
     function processAIFile(aiFile) {
-        // Find matching PNG files
+        // Find matching PNG file
         var aiBaseName = aiFile.name.replace(/\.ai$/i, "");
         var matchingPNG = null;
-        var matchingWhitePNG = null;
         
         // Find matching regular PNG
         for (var i = 0; i < pngFiles.length; i++) {
@@ -97,24 +78,34 @@
             }
         }
         
-        // Find matching white PNG
-        for (var i = 0; i < whitePngFiles.length; i++) {
-            var whiteName = whitePngFiles[i].name;
-            var whiteBaseName = whiteName.replace(/_white\.png$/i, "");
-            
-            if (whiteBaseName === aiBaseName || whiteName.indexOf(aiBaseName) === 0) {
-                matchingWhitePNG = whitePngFiles[i];
-                break;
-            }
-        }
-        
-        if (!matchingPNG || !matchingWhitePNG) {
-            var msg = "Missing PNG or white PNG for: " + aiFile.name;
+        if (!matchingPNG) {
+            var msg = "Missing PNG for: " + aiFile.name;
             $.writeln(msg);
             errorLog.push(msg);
             errorCount++;
             return false;
         }
+        
+        // Determine which size template to use based on filename
+        var sizeIs13x18 = aiFile.name.indexOf("13x18") !== -1;
+        var sizeIs16x22 = aiFile.name.indexOf("16x22") !== -1;
+        
+        if (!sizeIs13x18 && !sizeIs16x22) {
+            // Try to determine by looking for other indicators
+            if (aiFile.name.match(/13.*18/) || aiFile.name.match(/18.*13/)) {
+                sizeIs13x18 = true;
+            } else if (aiFile.name.match(/16.*22/) || aiFile.name.match(/22.*16/)) {
+                sizeIs16x22 = true;
+            } else {
+                var msg = "Could not determine size (13x18 or 16x22) from filename: " + aiFile.name;
+                $.writeln(msg);
+                errorLog.push(msg);
+                errorCount++;
+                return false;
+            }
+        }
+        
+        $.writeln("Identified size: " + (sizeIs13x18 ? "13x18cm" : "16x22cm") + " for " + aiFile.name);
         
         try {
             // Open AI file
@@ -128,8 +119,8 @@
             var originalPngLayer = doc.layers.add();
             originalPngLayer.name = "Original PNG";
             
-            var whitePngLayer = doc.layers.add();
-            whitePngLayer.name = "White PNG";
+            var whiteVectorLayer = doc.layers.add();
+            whiteVectorLayer.name = "White Vector";
             
             var vectorLayer = doc.layers.add();
             vectorLayer.name = "Vector Spot Color";
@@ -269,23 +260,132 @@
                 }
             }
             
-            // Set current layer to white PNG layer
-            doc.activeLayer = whitePngLayer;
+            // Set current layer to white vector layer
+            doc.activeLayer = whiteVectorLayer;
             
-            // Place white PNG in the middle layer
-            var whitePlacedItem = whitePngLayer.placedItems.add();
-            whitePlacedItem.file = matchingWhitePNG;
-            whitePlacedItem.width = abWidth;
-            whitePlacedItem.height = abHeight;
-            whitePlacedItem.position = [abBounds[0], abBounds[1]];
+            // Create white vector shapes directly in the document based on the SVG paths
+            // Setting fill color to white
+            var whiteColor = new RGBColor();
+            whiteColor.red = 255;
+            whiteColor.green = 255;
+            whiteColor.blue = 255;
             
-            // Embed the white PNG
-            try {
-                whitePlacedItem.embed();
-                $.writeln("Embedded white PNG: " + matchingWhitePNG.name);
-            } catch(e) {
-                $.writeln("Error embedding white PNG: " + e);
-                errorLog.push("Error embedding white PNG " + matchingWhitePNG.name + ": " + e);
+            if (sizeIs13x18) {
+                // Create paths based on 13x18cm_white.svg
+                
+                // Calculate scaling factors
+                var widthScale = abWidth / 1535;  // SVG width
+                var heightScale = abHeight / 2126; // SVG height
+                var scale = Math.min(widthScale, heightScale);
+                
+                // Create the main rectangle (first path in SVG)
+                var mainPath = whiteVectorLayer.pathItems.add();
+                mainPath.filled = true;
+                mainPath.stroked = false;
+                mainPath.fillColor = whiteColor;
+                
+                // Create a rectangle using the dimensions from the SVG
+                // Original SVG path is at translate(199,134) with size 1138x1138
+                var svgX = 199 * scale;
+                var svgY = -134 * scale;  // Y is inverted in Illustrator
+                var svgWidth = 1138 * scale;
+                var svgHeight = 1138 * scale;
+                
+                // Position relative to artboard
+                var rectX = abBounds[0] + svgX;
+                var rectY = abBounds[1] + svgY;
+                
+                // Create path with 4 points (rectangle)
+                var mainPathPoints = [
+                    [rectX, rectY],
+                    [rectX + svgWidth, rectY],
+                    [rectX + svgWidth, rectY - svgHeight],
+                    [rectX, rectY - svgHeight]
+                ];
+                mainPath.setEntirePath(mainPathPoints);
+                
+                // Create the small circle (second path in SVG)
+                var smallPath = whiteVectorLayer.pathItems.add();
+                smallPath.filled = true;
+                smallPath.stroked = false;
+                smallPath.fillColor = whiteColor;
+                
+                // Original SVG path is at translate(1025,1336) with size 204x204
+                var smallX = 1025 * scale;
+                var smallY = -1336 * scale;  // Y is inverted in Illustrator
+                var smallWidth = 204 * scale;
+                var smallHeight = 204 * scale;
+                
+                // Position relative to artboard
+                var smallRectX = abBounds[0] + smallX;
+                var smallRectY = abBounds[1] + smallY;
+                
+                // Create path with 4 points (rectangle)
+                var smallPathPoints = [
+                    [smallRectX, smallRectY],
+                    [smallRectX + smallWidth, smallRectY],
+                    [smallRectX + smallWidth, smallRectY - smallHeight],
+                    [smallRectX, smallRectY - smallHeight]
+                ];
+                smallPath.setEntirePath(smallPathPoints);
+                
+            } else {
+                // Create paths based on 16x22cm_white.svg
+                
+                // Calculate scaling factors
+                var widthScale = abWidth / 1890;  // SVG width
+                var heightScale = abHeight / 2598; // SVG height
+                var scale = Math.min(widthScale, heightScale);
+                
+                // Create the main rectangle (first path in SVG)
+                var mainPath = whiteVectorLayer.pathItems.add();
+                mainPath.filled = true;
+                mainPath.stroked = false;
+                mainPath.fillColor = whiteColor;
+                
+                // Original SVG path is at translate(250,164) with size 1390x1390
+                var svgX = 250 * scale;
+                var svgY = -164 * scale;  // Y is inverted in Illustrator
+                var svgWidth = 1390 * scale;
+                var svgHeight = 1390 * scale;
+                
+                // Position relative to artboard
+                var rectX = abBounds[0] + svgX;
+                var rectY = abBounds[1] + svgY;
+                
+                // Create path with 4 points (rectangle)
+                var mainPathPoints = [
+                    [rectX, rectY],
+                    [rectX + svgWidth, rectY],
+                    [rectX + svgWidth, rectY - svgHeight],
+                    [rectX, rectY - svgHeight]
+                ];
+                mainPath.setEntirePath(mainPathPoints);
+                
+                // Create the small circle (second path in SVG)
+                var smallPath = whiteVectorLayer.pathItems.add();
+                smallPath.filled = true;
+                smallPath.stroked = false;
+                smallPath.fillColor = whiteColor;
+                
+                // Original SVG path is at translate(1260,1632) with size 249x249
+                var smallX = 1260 * scale;
+                var smallY = -1632 * scale;  // Y is inverted in Illustrator
+                var smallWidth = 249 * scale;
+                var smallHeight = 249 * scale;
+                
+                // Position relative to artboard
+                var smallRectX = abBounds[0] + smallX;
+                var smallRectY = abBounds[1] + smallY;
+                
+                // Create path with 4 points (rectangle)
+                var smallPathPoints = [
+                    [smallRectX, smallRectY],
+                    [smallRectX + smallWidth, smallRectY],
+                    [smallRectX + smallWidth, smallRectY - smallHeight],
+                    [smallRectX, smallRectY - smallHeight]
+                ];
+                smallPath.setEntirePath(smallPathPoints);
             }
             
             // Set current layer to original PNG layer (top)
@@ -307,8 +407,8 @@
                 errorLog.push("Error embedding original PNG " + matchingPNG.name + ": " + e);
             }
             
-            // Rearrange layers so Original PNG is on top, White PNG is in the middle
-            whitePngLayer.zOrder(ZOrderMethod.SENDBACKWARD);
+            // Rearrange layers so Original PNG is on top, White Vector is in the middle
+            whiteVectorLayer.zOrder(ZOrderMethod.SENDBACKWARD);
             vectorLayer.zOrder(ZOrderMethod.SENDBACKWARD);
             
             // Save the modified file to the complete folder
