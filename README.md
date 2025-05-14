@@ -6,7 +6,7 @@ This repository contains scripts to automate the processing of plaque designs fo
 
 The automation process consists of three main parts:
 
-1. **Creates vector**: Creates a yellowv vector that is the same size as the files in vector_reference_for_code folder
+1. **Creates vector**: Creates a yellow vector that is the same size as the files in vector_reference_for_code folder
 2. **Layer Merging**: Creates a three-layer structure in Adobe Illustrator:
    - Yellow Overlay (top layer, 1% opacity)
    - Original PNG (middle layer)
