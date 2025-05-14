@@ -1,1 +1,0 @@
-Error with SVG: Error: Unable to set placed item's file, is the file path provided valid? Or try to use the raster item instead.Error with SVG: Error: Unable to set placed item's file, is the file path provided valid? Or try to use the raster item instead.
