@@ -23,12 +23,10 @@
         return;
     }
 
-    var folder = new Folder(scriptFolder.fsName + "/minningarplatti_to_be_processed");
-    if (!folder.exists) {
-        app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
-        reportEmpty("The 'minningarplatti_to_be_processed' folder does not exist. Please create it and place your 3 Frame and 4 Frame files there.");
-        return;
-    }
+    var sourceFolders = [
+        new Folder(scriptFolder.fsName + "/to_be_processed"),
+        new Folder(scriptFolder.fsName + "/minningarplatti_to_be_processed")
+    ];
 
     var completeFolder = new Folder(scriptFolder.fsName + "/complete");
     if (!completeFolder.exists) {
@@ -40,8 +38,9 @@
     // 3 Frame has two divider bars; 4 Frame has three. The artwork is a
     // black overlay, so the PNG only needs to sit on the artboard behind it.
 
-    // Illustrator returns names like "#1896_...4%20Frame%20-%20Vector.ai"
-    // when the real file is "#1896_...4 Frame - Vector.ai".
+    // Illustrator returns "#1896_...4%20Frame%20-%20Vector.ai" for a file
+    // whose real name is "#1896_...4 Frame - Vector.ai". A leading # makes
+    // File.decode leave the %20 sequences in place, so decode them directly.
     function readableName(fileOrName) {
         var name = fileOrName;
         if (fileOrName && fileOrName.name) {
@@ -51,13 +50,29 @@
             return "";
         }
 
-        var decoded = name;
-        try {
-            decoded = File.decode(name);
-        } catch (e) {
-            decoded = name.replace(/%20/gi, " ").replace(/%23/gi, "#");
+        var text = String(name);
+        var out = "";
+        for (var c = 0; c < text.length; c++) {
+            if (text.charAt(c) === "%" && c + 2 < text.length) {
+                var hex = text.substr(c + 1, 2);
+                if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
+                    out += String.fromCharCode(parseInt(hex, 16));
+                    c += 2;
+                    continue;
+                }
+            }
+            out += text.charAt(c);
         }
-        return decoded;
+        return out;
+    }
+
+    function pairKey(fileName) {
+        var key = readableName(fileName).toLowerCase();
+        key = key.replace(/\.[a-z0-9]+$/, "");
+        key = key.replace(/images/g, "");
+        key = key.replace(/vector/g, "");
+        key = key.replace(/[^a-z0-9]/g, "");
+        return key;
     }
 
     function frameCountFromName(fileName) {
@@ -66,13 +81,6 @@
             return null;
         }
         return match[2];
-    }
-
-    function pairStem(fileName) {
-        var stem = readableName(fileName).replace(/\.[^.]+$/, "");
-        stem = stem.replace(/\s*-\s*Images$/i, "");
-        stem = stem.replace(/\s*-\s*Vector$/i, "");
-        return stem.toLowerCase();
     }
 
     function fileInFolder(folder, fileName) {
@@ -90,37 +98,44 @@
         return encoded;
     }
 
-    var files = folder.getFiles();
     var aiFiles = [];
     var pngFiles = [];
 
-    for (var i = 0; i < files.length; i++) {
-        var file = files[i];
-        if (!(file instanceof File)) {
+    for (var folderIndex = 0; folderIndex < sourceFolders.length; folderIndex++) {
+        var sourceFolder = sourceFolders[folderIndex];
+        if (!sourceFolder.exists) {
             continue;
         }
 
-        var name = readableName(file);
-        if (!frameCountFromName(name)) {
-            continue;
-        }
+        var files = sourceFolder.getFiles();
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (!(file instanceof File)) {
+                continue;
+            }
 
-        if (name.match(/\.ai$/i)) {
-            aiFiles.push(file);
-        } else if (name.match(/\.png$/i)) {
-            pngFiles.push(file);
+            var name = readableName(file);
+            if (!frameCountFromName(name)) {
+                continue;
+            }
+
+            if (name.match(/\.ai$/i)) {
+                aiFiles.push({ file: file, folder: sourceFolder });
+            } else if (name.match(/\.png$/i)) {
+                pngFiles.push({ file: file, folder: sourceFolder });
+            }
         }
     }
 
     if (aiFiles.length === 0) {
         app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
-        reportEmpty("No 3 Frame or 4 Frame AI files found in 'minningarplatti_to_be_processed'.");
+        reportEmpty("No 3 Frame or 4 Frame AI files found in 'to_be_processed'.");
         return;
     }
 
     if (pngFiles.length === 0) {
         app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
-        reportEmpty("No 3 Frame or 4 Frame PNG files found in 'minningarplatti_to_be_processed'.");
+        reportEmpty("No 3 Frame or 4 Frame PNG files found in 'to_be_processed'.");
         return;
     }
 
@@ -128,25 +143,28 @@
     var errorCount = 0;
     var errorLog = [];
 
-    function findMatchingPNG(aiFile) {
-        var aiStem = pairStem(aiFile.name);
-        var aiFrames = frameCountFromName(aiFile.name);
+    function findMatchingPNG(aiEntry) {
+        var aiKey = pairKey(aiEntry.file);
+        var aiFrames = frameCountFromName(aiEntry.file);
         var fallback = null;
 
         for (var n = 0; n < pngFiles.length; n++) {
-            var pngFile = pngFiles[n];
-            if (pairStem(pngFile.name) !== aiStem) {
+            var pngEntry = pngFiles[n];
+            if (pairKey(pngEntry.file) !== aiKey) {
                 continue;
             }
-            if (frameCountFromName(pngFile.name) !== aiFrames) {
+            if (frameCountFromName(pngEntry.file) !== aiFrames) {
+                continue;
+            }
+            if (pngEntry.folder.fsName !== aiEntry.folder.fsName) {
                 continue;
             }
 
-            if (readableName(pngFile).match(/\s-\sImages\.png$/i)) {
-                return pngFile;
+            if (readableName(pngEntry.file).match(/images\.png$/i)) {
+                return pngEntry;
             }
             if (!fallback) {
-                fallback = pngFile;
+                fallback = pngEntry;
             }
         }
 
@@ -201,9 +219,10 @@
         imageLayer.zOrder(ZOrderMethod.SENDTOBACK);
     }
 
-    function processAIFile(aiFile) {
+    function processAIFile(aiEntry) {
+        var aiFile = aiEntry.file;
         var frames = frameCountFromName(aiFile);
-        var matchingPNG = findMatchingPNG(aiFile);
+        var matchingPNG = findMatchingPNG(aiEntry);
 
         if (!matchingPNG) {
             var missingMsg = "Missing PNG for: " + readableName(aiFile);
@@ -213,8 +232,8 @@
             return false;
         }
 
-        var vectorFile = fileInFolder(folder, readableName(aiFile));
-        var imageFile = fileInFolder(folder, readableName(matchingPNG));
+        var vectorFile = fileInFolder(aiEntry.folder, readableName(aiFile));
+        var imageFile = fileInFolder(matchingPNG.folder, readableName(matchingPNG.file));
         $.writeln("Processing " + frames + " Frame file: " + readableName(vectorFile) + " with " + readableName(imageFile));
 
         var doc = null;

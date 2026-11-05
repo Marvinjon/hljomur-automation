@@ -33,7 +33,29 @@
         completeFolder.create();
     }
     
-    // Get all files in the to_be_processed folder
+    function decodeFileName(name) {
+        var text = String(name);
+        var out = "";
+        for (var c = 0; c < text.length; c++) {
+            if (text.charAt(c) === "%" && c + 2 < text.length) {
+                var hex = text.substr(c + 1, 2);
+                if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
+                    out += String.fromCharCode(parseInt(hex, 16));
+                    c += 2;
+                    continue;
+                }
+            }
+            out += text.charAt(c);
+        }
+        return out;
+    }
+
+    function isMinningarplattiFile(name) {
+        return decodeFileName(name).match(/(^|[^0-9])([34])\s*Frames?/i);
+    }
+
+    // Get all files in the to_be_processed folder.
+    // 3 Frame and 4 Frame pairs are handled by minningarplatti_script.jsx.
     var files = folder.getFiles();
     var aiFiles = [];
     var pngFiles = [];
@@ -42,6 +64,10 @@
     for (var i = 0; i < files.length; i++) {
         var file = files[i];
         var name = file.name;
+
+        if (isMinningarplattiFile(name)) {
+            continue;
+        }
         
         if (name.match(/\.ai$/i)) {
             aiFiles.push(file);
