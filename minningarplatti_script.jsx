@@ -7,6 +7,16 @@
     var scriptFile = new File($.fileName);
     var scriptFolder = scriptFile.parent;
 
+    function reportEmpty(message) {
+        try {
+            if ($.global.HLJOMUR_RUN_ALL === true) {
+                $.writeln(message);
+                return;
+            }
+        } catch (e) {}
+        alert(message);
+    }
+
     if (!scriptFolder.exists) {
         app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
         alert("Script folder does not exist. Exiting.");
@@ -16,7 +26,7 @@
     var folder = new Folder(scriptFolder.fsName + "/minningarplatti_to_be_processed");
     if (!folder.exists) {
         app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
-        alert("The 'minningarplatti_to_be_processed' folder does not exist. Please create it and place your 3 Frame and 4 Frame files there.");
+        reportEmpty("The 'minningarplatti_to_be_processed' folder does not exist. Please create it and place your 3 Frame and 4 Frame files there.");
         return;
     }
 
@@ -69,13 +79,13 @@
 
     if (aiFiles.length === 0) {
         app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
-        alert("No 3 Frame or 4 Frame AI files found in 'minningarplatti_to_be_processed'.");
+        reportEmpty("No 3 Frame or 4 Frame AI files found in 'minningarplatti_to_be_processed'.");
         return;
     }
 
     if (pngFiles.length === 0) {
         app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
-        alert("No 3 Frame or 4 Frame PNG files found in 'minningarplatti_to_be_processed'.");
+        reportEmpty("No 3 Frame or 4 Frame PNG files found in 'minningarplatti_to_be_processed'.");
         return;
     }
 

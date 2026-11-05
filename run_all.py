@@ -3,9 +3,12 @@ import os
 import time
 
 
-# Step 1: Run Illustrator script
-jsx_script_path = os.path.abspath("layer_merge_script.jsx")
+# Runs the plaque script first, then the 3 Frame / 4 Frame script.
+# Dismiss the first completion dialog. The second script starts after that.
+jsx_script_path = os.path.abspath("run_all_scripts.jsx")
 print(f"Launching Illustrator with script: {jsx_script_path}")
+print("1. Plaque files in to_be_processed")
+print("2. 3 Frame and 4 Frame pairs in minningarplatti_to_be_processed")
 
 # The simplest approach is to use 'open' command to open the script with Illustrator
 try:

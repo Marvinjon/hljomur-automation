@@ -5,6 +5,16 @@
     var scriptFile = new File($.fileName);
     var scriptFolder = scriptFile.parent;
     
+    function reportEmpty(message) {
+        try {
+            if ($.global.HLJOMUR_RUN_ALL === true) {
+                $.writeln(message);
+                return;
+            }
+        } catch (e) {}
+        alert(message);
+    }
+
     if (!scriptFolder.exists) {
         alert("Script folder does not exist. Exiting.");
         return;
@@ -13,7 +23,7 @@
     // Get the source folder for files to be processed
     var folder = new Folder(scriptFolder.fsName + "/to_be_processed");
     if (!folder.exists) {
-        alert("The 'to_be_processed' folder does not exist. Please create it and place your files there.");
+        reportEmpty("The 'to_be_processed' folder does not exist. Please create it and place your files there.");
         return;
     }
 
@@ -41,12 +51,12 @@
     }
     
     if (aiFiles.length === 0) {
-        alert("No AI files found in 'to_be_processed' folder.");
+        reportEmpty("No AI files found in 'to_be_processed' folder.");
         return;
     }
     
     if (pngFiles.length === 0) {
-        alert("No PNG files found in 'to_be_processed' folder.");
+        reportEmpty("No PNG files found in 'to_be_processed' folder.");
         return;
     }
 
