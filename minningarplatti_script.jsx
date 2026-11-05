@@ -40,8 +40,28 @@
     // 3 Frame has two divider bars; 4 Frame has three. The artwork is a
     // black overlay, so the PNG only needs to sit on the artboard behind it.
 
+    // Illustrator returns names like "#1896_...4%20Frame%20-%20Vector.ai"
+    // when the real file is "#1896_...4 Frame - Vector.ai".
+    function readableName(fileOrName) {
+        var name = fileOrName;
+        if (fileOrName && fileOrName.name) {
+            name = fileOrName.name;
+        }
+        if (!name) {
+            return "";
+        }
+
+        var decoded = name;
+        try {
+            decoded = File.decode(name);
+        } catch (e) {
+            decoded = name.replace(/%20/gi, " ").replace(/%23/gi, "#");
+        }
+        return decoded;
+    }
+
     function frameCountFromName(fileName) {
-        var match = fileName.match(/(^|[^0-9])([34])\s*Frames?/i);
+        var match = readableName(fileName).match(/(^|[^0-9])([34])\s*Frames?/i);
         if (!match) {
             return null;
         }
@@ -49,10 +69,25 @@
     }
 
     function pairStem(fileName) {
-        var stem = fileName.replace(/\.[^.]+$/, "");
-        stem = stem.replace(/ - Images$/i, "");
-        stem = stem.replace(/ - Vector$/i, "");
+        var stem = readableName(fileName).replace(/\.[^.]+$/, "");
+        stem = stem.replace(/\s*-\s*Images$/i, "");
+        stem = stem.replace(/\s*-\s*Vector$/i, "");
         return stem.toLowerCase();
+    }
+
+    function fileInFolder(folder, fileName) {
+        var direct = new File(folder.fsName + "/" + fileName);
+        if (direct.exists) {
+            return direct;
+        }
+
+        // # starts a URI fragment, so rebuild the file through an encoded name.
+        var encoded = new File(folder.fullName + "/" + File.encode(fileName));
+        if (encoded.exists) {
+            return encoded;
+        }
+
+        return encoded;
     }
 
     var files = folder.getFiles();
@@ -65,7 +100,7 @@
             continue;
         }
 
-        var name = file.name;
+        var name = readableName(file);
         if (!frameCountFromName(name)) {
             continue;
         }
@@ -107,7 +142,7 @@
                 continue;
             }
 
-            if (pngFile.name.match(/ - Images\.png$/i)) {
+            if (readableName(pngFile).match(/\s-\sImages\.png$/i)) {
                 return pngFile;
             }
             if (!fallback) {
@@ -167,25 +202,27 @@
     }
 
     function processAIFile(aiFile) {
-        var frames = frameCountFromName(aiFile.name);
+        var frames = frameCountFromName(aiFile);
         var matchingPNG = findMatchingPNG(aiFile);
 
         if (!matchingPNG) {
-            var missingMsg = "Missing PNG for: " + aiFile.name;
+            var missingMsg = "Missing PNG for: " + readableName(aiFile);
             $.writeln(missingMsg);
             errorLog.push(missingMsg);
             errorCount++;
             return false;
         }
 
-        $.writeln("Processing " + frames + " Frame file: " + aiFile.name + " with " + matchingPNG.name);
+        var vectorFile = fileInFolder(folder, readableName(aiFile));
+        var imageFile = fileInFolder(folder, readableName(matchingPNG));
+        $.writeln("Processing " + frames + " Frame file: " + readableName(vectorFile) + " with " + readableName(imageFile));
 
         var doc = null;
         try {
-            doc = openVectorFile(aiFile);
-            placePNGBehindVector(doc, matchingPNG);
+            doc = openVectorFile(vectorFile);
+            placePNGBehindVector(doc, imageFile);
 
-            var saveFile = new File(completeFolder.fsName + "/" + aiFile.name);
+            var saveFile = new File(completeFolder.fullName + "/" + File.encode(readableName(aiFile)));
             var saveOpts = new IllustratorSaveOptions();
             saveOpts.compressed = true;
             doc.saveAs(saveFile, saveOpts);
@@ -195,7 +232,7 @@
             processedCount++;
             return true;
         } catch (e) {
-            var msg = "Error processing " + aiFile.name + ": " + e;
+            var msg = "Error processing " + readableName(aiFile) + ": " + e;
             $.writeln(msg);
             errorLog.push(msg);
             errorCount++;
@@ -203,7 +240,7 @@
                 try {
                     doc.close(SaveOptions.DONOTSAVECHANGES);
                 } catch (closeError) {
-                    $.writeln("Error closing " + aiFile.name + ": " + closeError);
+                    $.writeln("Error closing " + readableName(aiFile) + ": " + closeError);
                 }
             }
             return false;
