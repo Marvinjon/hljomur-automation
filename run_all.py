@@ -22,6 +22,12 @@ try:
     
     # Then open the script file - it should open in Illustrator
     subprocess.run(["open", "-a", illustrator_app, jsx_script_path], check=True)
+
+    print("Click OK on the Illustrator dialogs when the plaque script and the frame script finish.")
+    input("Press Enter here to export the files in complete to PDF... ")
+
+    pdf_script_path = os.path.abspath("export_pdf.py")
+    subprocess.run(["python3", pdf_script_path], check=True)
     
 except Exception as e:
     print(f"Error launching Illustrator: {e}")
