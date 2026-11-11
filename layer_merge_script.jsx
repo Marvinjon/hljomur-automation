@@ -477,12 +477,35 @@
             $.writeln("3: " + doc.layers[2].name);
             
             // Save the modified file to the complete folder
-            var saveFile = new File(completeFolder.fsName + "/" + aiFile.name);
+            var outputName = decodeFileName(aiFile.name);
+            var saveFile = new File(completeFolder.fullName + "/" + File.encode(outputName));
             
             // Save as AI file
             var saveOpts = new IllustratorSaveOptions();
             saveOpts.compressed = true;
             doc.saveAs(saveFile, saveOpts);
+
+            var pdfName = outputName.replace(/\.ai$/i, ".pdf");
+            var pdfFile = new File(completeFolder.fullName + "/" + File.encode(pdfName));
+            var pdfOpts = new PDFSaveOptions();
+            pdfOpts.preserveEditability = false;
+            pdfOpts.generateThumbnails = true;
+            pdfOpts.embedICCProfile = true;
+            pdfOpts.embedLinkedFiles = true;
+            pdfOpts.optimization = true;
+            pdfOpts.compressArt = true;
+            try {
+                pdfOpts.compatibility = PDFCompatibility.ACROBAT7;
+            } catch (pdfCompatError) {}
+            try {
+                pdfOpts.colorDownsampling = DownsampleMethod.NODOWNSAMPLE;
+                pdfOpts.grayscaleDownsampling = DownsampleMethod.NODOWNSAMPLE;
+                pdfOpts.colorCompression = CompressionQuality.JPEGMAXIMUM;
+                pdfOpts.grayscaleCompression = CompressionQuality.JPEGMAXIMUM;
+            } catch (pdfQualityError) {}
+            doc.saveAs(pdfFile, pdfOpts);
+            $.writeln("Saved PDF: " + pdfName);
+
             doc.close(SaveOptions.DONOTSAVECHANGES);
             
             processedCount++;
