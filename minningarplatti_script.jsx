@@ -241,47 +241,10 @@
             doc = openVectorFile(vectorFile);
             placePNGBehindVector(doc, imageFile);
 
-            var outputName = readableName(aiFile);
-            var saveFile = new File(completeFolder.fullName + "/" + File.encode(outputName));
+            var saveFile = new File(completeFolder.fullName + "/" + File.encode(readableName(aiFile)));
             var saveOpts = new IllustratorSaveOptions();
             saveOpts.compressed = true;
             doc.saveAs(saveFile, saveOpts);
-
-            var pdfName = outputName.replace(/\.ai$/i, ".pdf");
-            var pdfFile = new File(completeFolder.fullName + "/" + File.encode(pdfName));
-            var pdfOpts = new PDFSaveOptions();
-            pdfOpts.preserveEditability = false;
-            pdfOpts.generateThumbnails = true;
-            pdfOpts.embedICCProfile = true;
-            pdfOpts.embedLinkedFiles = true;
-            pdfOpts.optimization = true;
-            pdfOpts.compressArt = true;
-            pdfOpts.fontSubsetThreshold = 100;
-            pdfOpts.printerResolution = 800;
-            pdfOpts.colorDownsamplingImageThreshold = 300;
-            pdfOpts.grayscaleDownsamplingImageThreshold = 300;
-            pdfOpts.monochromeDownsamplingImageThreshold = 450;
-            try {
-                pdfOpts.compatibility = PDFCompatibility.ACROBAT7;
-            } catch (pdfCompatError) {}
-            try {
-                pdfOpts.colorDownsampling = DownsampleMethod.NODOWNSAMPLE;
-            } catch (pdfColorDownsampleError) {}
-            try {
-                pdfOpts.grayscaleDownsampling = DownsampleMethod.NODOWNSAMPLE;
-            } catch (pdfGrayDownsampleError) {}
-            try {
-                pdfOpts.monochromeDownsampling = DownsampleMethod.NODOWNSAMPLE;
-            } catch (pdfMonoDownsampleError) {}
-            try {
-                pdfOpts.colorCompression = CompressionQuality.JPEGMAXIMUM;
-            } catch (pdfColorCompressionError) {}
-            try {
-                pdfOpts.grayscaleCompression = CompressionQuality.JPEGMAXIMUM;
-            } catch (pdfGrayCompressionError) {}
-            doc.saveAs(pdfFile, pdfOpts);
-            $.writeln("Saved PDF: " + pdfName);
-
             doc.close(SaveOptions.DONOTSAVECHANGES);
             doc = null;
 
